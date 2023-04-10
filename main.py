@@ -4,13 +4,6 @@ import sim
 import npragglib as npr
 import numpy as np
 
-X = np.matrix(" 10; 0; 0; 0")
-Y = np.matrix("1, 0, 0, 0;"
-              "0, 0, 0, 0;"
-              "0, 0, 0, 0;"
-              "1, 0, 0, 0;"
-              "1, 1, 1, 1")
-
 # M number of data points
 # K number of agents
 # d dimension of features
