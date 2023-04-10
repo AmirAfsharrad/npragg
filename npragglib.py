@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 from svm_data_gen import svm_data_gen
 
 
-def solve_eta(X, Y, Z, K, M):
+def solve_eta(X, Y, Z, K, M, h):
     # X: feature vector of length M
     # Y: vector matrix of size K * M
     # Z: true label vector of length M
@@ -24,7 +24,7 @@ def solve_eta(X, Y, Z, K, M):
             obj += cvx.log_sum_exp(temp[k, m * 2: m * 2 + 2])
             cons.append(temp[k, m * 2] == 0)
             cons.append(temp[k, m * 2 + 1] ==
-                        get_eta_coeffs(X=X, Y=Y, Z=Z, K=K, M=M, k_index=k, m_index=m, eta=eta, K_func=kernel))
+                        get_eta_coeffs(X=X, Y=Y, Z=Z, K=K, M=M, k_index=k, m_index=m, eta=eta, K_func=kernel, h=h))
             cons.append(eta[k, m] <= 0)
 
     prob = cvx.Problem(cvx.Minimize(obj), cons)
@@ -35,26 +35,25 @@ def solve_eta(X, Y, Z, K, M):
     return prob.value, eta.value
 
 
-def kernel(x):
-    h = 5
+def kernel(x, h):
     return np.exp(- np.square(x) / h)
 
 
-def get_eta_obj(X, Y, Z, K, M, eta):
+def get_eta_obj(X, Y, Z, K, M, eta, h):
     obj = 0
     for k in range(K):
         for m in range(M):
             obj += cvx.log_sum_exp(
-                get_eta_coeffs(X=X, Y=Y, Z=Z, K=K, M=M, k_index=k, m_index=m, eta=eta, K_func=kernel))
+                get_eta_coeffs(X=X, Y=Y, Z=Z, K=K, M=M, k_index=k, m_index=m, eta=eta, K_func=kernel, h=h))
 
     return obj
 
 
-def get_eta_coeffs(X, Y, Z, K, M, k_index, m_index, eta, K_func):
+def get_eta_coeffs(X, Y, Z, K, M, k_index, m_index, eta, K_func, h):
     x = X[m_index]
     a = np.zeros((M, 1))
     for m in range(M):
-        a[m] = K_func(np.linalg.norm(x - X[m]))
+        a[m] = K_func(np.linalg.norm(x - X[m]), h)
     a /= np.sum(a)
 
     if np.sign(Z[m_index]) == np.sign(Y[k_index, m_index]):
@@ -125,13 +124,13 @@ def maj_vote(Y, M, K):
     return out
 
 
-def f(X, M, eta, k, K_func, x):
+def f(X, M, eta, k, K_func, h, x):
     D = 0
     N = 0
 
     for m in range(M):
-        N += eta[k, m] * K_func(np.linalg.norm(x - X[m]))
-        D += K_func(np.linalg.norm(x - X[m]))
+        N += eta[k, m] * K_func(np.linalg.norm(x - X[m]), h)
+        D += K_func(np.linalg.norm(x - X[m]), h)
 
     return N / D
 
@@ -172,7 +171,7 @@ def eps_init_point(Y, M, K):
     return Z
 
 
-def em(X, Y, M, K, p_flip=0, initialization="maj"):
+def em(X, Y, M, K, h, p_flip=0, initialization="maj"):
     """
     :param X:
     :param Y:
@@ -194,12 +193,12 @@ def em(X, Y, M, K, p_flip=0, initialization="maj"):
     while iterate:
         iterate = False
         counter += 1
-        p, eta = solve_eta(X=X, Y=Y, Z=Z, M=M, K=K)
+        p, eta = solve_eta(X=X, Y=Y, Z=Z, M=M, K=K, h=h)
         print('likelihood value =', p)
         lrt_coeffs = np.zeros((K, M))
         for m in range(M):
             for k in range(K):
-                lrt_coeffs[k, m] = f(X, M, eta, k, kernel, X[m])
+                lrt_coeffs[k, m] = f(X, M, eta, k, kernel, h, X[m])
 
         for m in range(M):
             z = lrt_estimator(y=Y[:, m], lrt_coeffs=lrt_coeffs[:, m], K=K)
