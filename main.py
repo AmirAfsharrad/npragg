@@ -13,3 +13,18 @@ import numpy as np
 
 # The following function will give the estimated labels
 # Z_est = lib.em(X=, Y=, K=, M=, h=)
+
+
+## EXAMPLE:
+X = np.matrix(" 0, 0;"
+              " 0, 0;"
+              " 0, 0;"
+              " 0, 0")
+Y = np.matrix("1, 0, 1, 0;"
+              "0, 0, 0, 0;"
+              "0, 0, 0, 0;"
+              "1, 1, 0, 1;"
+              "1, 1, 1, 1")
+
+Zem = lib.em(X, Y, K=5, M=4, h=1)
+print(Zem)
